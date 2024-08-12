@@ -2,32 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+input, textarea{
+    @apply border-2 border-gray-300 rounded-md px-1 w-full;
+    @apply mb-2;
+}
+input:focus, textare:focus{
+    @apply border-green-950;
+}
+h1{
+    @apply text-green-950 mb-2 text-xl font-bold;
+}
+label{
+    @apply text-green-950;
+}
+.btn-primary{
+    @apply bg-green-950 text-white px-4 py-1 rounded-md;
+}
+table.basic{
+    @apply min-w-[40%];
+}
+table.basic thead tr th {
+    @apply border border-green-500 p-1 bg-green-200;;
+}
+table.basic thead tr td {
+    @apply bg-green-200;
+}
+table.basic tr td{
+    @apply border border-green-500 p-1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+
+table.basic a{
+    @apply bg-green-950 text-white text-sm py-1 px-2 rounded-md inline-flex gap-1 mr-1 items-center; 
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.btn-cancel{
+    @apply bg-red-500 text-white px-4 py-1 rounded-md;
 }
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.btn-default{
+    @apply bg-green-950 text-white px-4 py-1 rounded-md;
 }
