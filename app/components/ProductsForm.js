@@ -38,9 +38,24 @@ export default function ProductsForm(
         const files = ev.target.files;
         if (files?.length > 0) {
             const data = new FormData();
-            files.forEach(file => data.append('file', file));
-            //await axios.post('/api/product/upload', data);
+            for (const file of files) {
+                data.append('file', file);
+            }
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: data,
+                });
+                if (!res.ok) throw new Error('Upload failed');
+                const result = await res.json();
+                console.log("successful upload", result);
+                // Handle successful upload (e.g., update state with uploaded image URLs)
+            } catch (error) {
+                console.error('Upload error:', error);
+                // Handle error (e.g., show error message to user)
+            }
         }
+    
     }
     return (
 
@@ -61,7 +76,7 @@ export default function ProductsForm(
                     <div>
                         Upload
                     </div>
-                <input type="file" onChange={uploadImages} className="hidden" />
+                    <input type="file" onChange={uploadImages} className="hidden" />
                 </label>
                 {!images?.length && (
                     <div>No images on this product</div>
