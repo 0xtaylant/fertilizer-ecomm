@@ -2,6 +2,7 @@
 import axios from "axios";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { set } from "mongoose";
 
 export default function ProductsForm(
     {
@@ -9,25 +10,27 @@ export default function ProductsForm(
         productName: existingProductName,
         productDescription: existingProductDescription,
         productPrice: existingProductPrice,
-        images,
+        productImages: existingProductImages,
     }) {
     const [productName, setProductName] = useState(existingProductName || '');
     const [productDescription, setProductDescription] = useState(existingProductDescription || '');
     const [productPrice, setProductPrice] = useState(existingProductPrice || '');
+    const [productImages, setProductImages] = useState(existingProductImages || []);
     const [goToProducts, setgoToProducts] = useState(false);
     const router = useRouter();
-    async function createProduct(ev) {
+    async function saveProduct(ev) {
+        ev.preventDefault();
         const data = {
             productName,
             productDescription,
-            productPrice
+            productPrice,
+            productImages
         };
-        ev.preventDefault();
+        console.log("Sending data to create/update product:", data);
         if (_id) {
-            axios.put('/api/product', { ...data, _id });
+            await axios.put('/api/product', { ...data, _id });
         } else {
-
-            axios.post('/api/product', data);
+            await axios.post('/api/product', data);
         }
         setgoToProducts(true);
     }
@@ -42,24 +45,20 @@ export default function ProductsForm(
                 data.append('file', file);
             }
             try {
-                const res = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: data,
-                });
-                if (!res.ok) throw new Error('Upload failed');
-                const result = await res.json();
-                console.log("successful upload", result);
-                // Handle successful upload (e.g., update state with uploaded image URLs)
+                const res = await axios.post('/api/upload', data);
+                console.log("res:", res.data);
+                if (res.data.links) {
+                    setProductImages(existingProductImages => [...existingProductImages, ...res.data.links]);
+                }
             } catch (error) {
                 console.error('Upload error:', error);
                 // Handle error (e.g., show error message to user)
             }
         }
-    
     }
     return (
 
-        <form onSubmit={createProduct}>
+        <form onSubmit={saveProduct}>
             <label>Product Name</label>
             <input
                 type="text"
@@ -68,7 +67,12 @@ export default function ProductsForm(
                 onChange={ev => setProductName(ev.target.value)}
             />
             <label>Photos</label>
-            <div className="mb-2">
+            <div className="mb-2 flex flex-wrap gap-2">
+                {productImages.length > 0 && productImages.map(link => (
+                    <div key={link} className="h-24">
+                        <img src={link} className="rounded-lg" />
+                    </div>
+                ))}
                 <label className="w-24 h-24 border border-green-950 cursor-pointer text-center flex items-center justify-center text-sm text-gray-500 rounded-lg bg-gray-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15" />
@@ -78,7 +82,7 @@ export default function ProductsForm(
                     </div>
                     <input type="file" onChange={uploadImages} className="hidden" />
                 </label>
-                {!images?.length && (
+                {!productImages?.length && (
                     <div>No images on this product</div>
                 )}
             </div>

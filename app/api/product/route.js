@@ -29,14 +29,14 @@ export async function POST(request) {
     await mongooseConnect();
     try {
         const body = await request.json();
-        console.log("Request body:", body);
-        const { productName, productDescription, productPrice } = body;
+        const { productName, productDescription, productPrice, productImages } = body;
         const ProductDoc = await Product.create({
             productName,
             productDescription,
-            productPrice
+            productPrice,
+            productImages
         });
-        console.log("Product created:", ProductDoc);
+
         return NextResponse.json(ProductDoc, { status: 201 });
     } catch (error) {
         console.error("Error creating product:", error);
@@ -45,19 +45,22 @@ export async function POST(request) {
 }
 
 
+
 export async function PUT(request) {
     await mongooseConnect();
 
     try {
-        const {productName, productDescription, productPrice, _id} = await request.json();
+        const body = await request.json();
+        const {productName, productDescription, productPrice, productImages, _id} = body;
+        
         const updatedProduct = await Product.findByIdAndUpdate(
             _id,
-            { productName, productDescription, productPrice },
-            { new: true } // This option returns the updated document
+            { productName, productDescription, productPrice, productImages },
+            { new: true }
         );
         return NextResponse.json(updatedProduct);
     } catch (error) {
-        console.error('Error updating product(s):', error);
+        console.error('Error updating product:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -77,8 +80,6 @@ export async function DELETE(request) {
         if (!deletedProduct) {
             return NextResponse.json({ error: 'Product not found' }, { status: 404 });
         }
-
-        console.log("Product deleted:", deletedProduct);
         return NextResponse.json({ message: 'Product deleted successfully', deletedProduct });
 
     } catch (error) {

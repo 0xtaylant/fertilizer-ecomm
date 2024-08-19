@@ -2,21 +2,16 @@ import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export async function POST(request) {
-    console.log('AWS_REGION:', process.env.AWS_REGION);
-    console.log('AWS_BUCKET_NAME:', process.env.AWS_BUCKET_NAME);
-    console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not Set');
-    console.log('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not Set');
+
     try {
         const formData = await request.formData();
         const file = formData.get('file');
+        const links = [];
 
         if (!file) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        console.log('File name:', file.name);
-        console.log('File type:', file.type);
-        console.log('File size:', file.size);
 
         const client = new S3Client({
             region: process.env.AWS_REGION || 'eu-central-1',
@@ -35,15 +30,15 @@ export async function POST(request) {
             Key: fileName,
             Body: Buffer.from(fileBuffer),
             ContentType: file.type,
+            ACL: 'public-read',
         });
+        
+        const link =`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-central-1'}.amazonaws.com/${fileName}`;
+        links.push(link);
 
         const result = await client.send(command);
 
-        return NextResponse.json({
-            message: 'Upload successful',
-            fileName: fileName,
-            fileUrl: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-central-1'}.amazonaws.com/${fileName}`,
-            s3Result: result
+        return NextResponse.json({ links
         }, { status: 200 });
     } catch (error) {
         console.error('Upload error:', error);
