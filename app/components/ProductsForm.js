@@ -1,6 +1,6 @@
 'use client';
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { set } from "mongoose";
 
@@ -11,24 +11,51 @@ export default function ProductsForm(
         productDescription: existingProductDescription,
         productPrice: existingProductPrice,
         productImages: existingProductImages,
+        category: existingCategory
     }) {
+    const [categories, setCategories] = useState([]);
+    const [category, setCategory] = useState(existingCategory || '');
     const [productName, setProductName] = useState(existingProductName || '');
     const [productDescription, setProductDescription] = useState(existingProductDescription || '');
     const [productPrice, setProductPrice] = useState(existingProductPrice || '');
     const [productImages, setProductImages] = useState(existingProductImages || []);
     const [goToProducts, setgoToProducts] = useState(false);
     const router = useRouter();
+
+    async function fetchCategories() {
+        try {
+            const response = await axios.get('/api/category');
+            console.log("Categories response:", response);
+            if (Array.isArray(response.data)) {
+                setCategories(response.data);
+                console.log("Categories set:", response.data);
+            } else {
+                console.error("Unexpected categories data:", response.data);
+                setCategories([]);
+            }
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+            setCategories([]);
+        }
+    }
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+
     async function saveProduct(ev) {
         ev.preventDefault();
         const data = {
             productName,
             productDescription,
             productPrice,
-            productImages
+            productImages,
+            category
         };
         console.log("Sending data to create/update product:", data);
         if (_id) {
-            await axios.put('/api/product', { ...data, _id });
+            await axios.put('/api/product', { ...data, _id});
         } else {
             await axios.post('/api/product', data);
         }
@@ -56,6 +83,8 @@ export default function ProductsForm(
             }
         }
     }
+
+    
     return (
 
         <form onSubmit={saveProduct}>
@@ -66,6 +95,13 @@ export default function ProductsForm(
                 value={productName}
                 onChange={ev => setProductName(ev.target.value)}
             />
+            <label>Category</label>
+            <select value={category} onChange={ev => setCategory(ev.target.value)}>
+                <option value="">uncategorized</option>
+                {categories.length >0 && categories.map(c => (
+                    <option value={c._id}>{c.name}</option> 
+                ))}
+            </select>
             <label>Photos</label>
             <div className="mb-2 flex flex-wrap gap-2">
                 {productImages.length > 0 && productImages.map(link => (

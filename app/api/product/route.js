@@ -29,12 +29,13 @@ export async function POST(request) {
     await mongooseConnect();
     try {
         const body = await request.json();
-        const { productName, productDescription, productPrice, productImages } = body;
+        const { productName, productDescription, productPrice, productImages, category } = body;
         const ProductDoc = await Product.create({
             productName,
             productDescription,
             productPrice,
-            productImages
+            productImages,
+            category
         });
 
         return NextResponse.json(ProductDoc, { status: 201 });
@@ -51,11 +52,11 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const {productName, productDescription, productPrice, productImages, _id} = body;
+        const {productName, productDescription, productPrice, productImages,category, _id} = body;
         
         const updatedProduct = await Product.findByIdAndUpdate(
             _id,
-            { productName, productDescription, productPrice, productImages },
+            { productName, productDescription, productPrice, productImages, category },
             { new: true }
         );
         return NextResponse.json(updatedProduct);

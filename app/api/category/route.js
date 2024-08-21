@@ -60,3 +60,16 @@ export async function PUT(request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function DELETE(request) {
+    await mongooseConnect();
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    try {
+        await Category.findByIdAndDelete(id);
+        return NextResponse.json({ message: 'Category deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting category:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

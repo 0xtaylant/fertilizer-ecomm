@@ -2,10 +2,13 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
-import { set } from "mongoose";
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 export default function Categories() {
-    const [editedCategory, setEditedCategory] = useState('');
+    const [editedCategory, setEditedCategory] = useState(null);
     const [name, setName] = useState('');
     const [parentCategory, setParentCategory] = useState('0');
     const [categories, setCategories] = useState([]);
@@ -21,33 +24,62 @@ export default function Categories() {
 
     async function saveCategory(ev) {
         ev.preventDefault();
-        const data = { name, parentCategory };
+        const data = { name, parentCategory: parentCategory === '0' ? null : parentCategory };
         try {
             if (editedCategory) {
                 data._id = editedCategory._id;
-                const response = await axios.put('/api/category', data);
-                setCategories(prev => [...prev, response.data]);
-                setEditedCategory(null);
+                await axios.put('/api/category', data);
             } else {
-                const response = await axios.post('/api/category', data);
-                setCategories(prev => [...prev, response.data]);
+                await axios.post('/api/category', data);
             }
-
             setName('');
+            setEditedCategory(null);
             fetchCategories();
         } catch (error) {
             console.error("Error saving category:", error);
         }
     }
-    useEffect(() => {
-        fetchCategories();
-    }, []);
 
     function editCategory(category) {
         setEditedCategory(category);
         setName(category.name);
-        setParentCategory(category.parent?._id);
+        setParentCategory(category.parent?._id || '0');
     }
+
+    function deleteCategory(category) {
+        MySwal.fire({
+            title: 'Are you sure?',
+            text: `Do you want to delete ${category.name}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await axios.delete(`/api/category?id=${category._id}`);
+                    fetchCategories();
+                    MySwal.fire(
+                        'Deleted!',
+                        'Your category has been deleted.',
+                        'success'
+                    );
+                } catch (error) {
+                    console.error("Error deleting category:", error);
+                    MySwal.fire(
+                        'Error!',
+                        'Failed to delete the category.',
+                        'error'
+                    );
+                }
+            }
+        });
+    }
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
     return (
         <Layout>
             <h1>Categories</h1>
@@ -83,7 +115,7 @@ export default function Categories() {
                     </tr>
                 </thead>
                 <tbody>
-                    {categories && categories.length > 0 ? categories.map(category => (
+                    {categories.length > 0 ? categories.map(category => (
                         <tr key={category._id}>
                             <td>{category.name}</td>
                             <td>{category?.parent?.name}</td>
@@ -92,12 +124,15 @@ export default function Categories() {
                                     className="btn-primary mr-2">
                                     Edit
                                 </button>
-                                <button className="btn-primary">Delete</button>
+                                <button onClick={() => deleteCategory(category)}
+                                    className="btn-primary">
+                                    Delete
+                                </button>
                             </td>
                         </tr>
                     )) : (
                         <tr>
-                            <td>No categories found</td>
+                            <td colSpan="3">No categories found</td>
                         </tr>
                     )}
                 </tbody>
