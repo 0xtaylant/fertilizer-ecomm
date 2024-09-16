@@ -66,6 +66,7 @@ export default function OrdersPage() {
                 <th className="border border-gray-300 px-4 py-2">Tarih</th>
                 <th className="border border-gray-300 px-4 py-2">Ürünler</th>
                 <th className="border border-gray-300 px-4 py-2">İşlemler</th>
+                <th className="border border-gray-300 px-4 py-2">Sipariş Durumu</th>
               </tr>
             </thead>
             <tbody>
@@ -93,6 +94,7 @@ export default function OrdersPage() {
                       Sil
                     </button>
                   </td>
+                  <td className="border border-gray-300 px-4 py-2">{order.status}</td>
                 </tr>
               ))}
             </tbody>
