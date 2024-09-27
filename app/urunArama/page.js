@@ -1,66 +1,68 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import Layout from '../components/Layout';
 import { useDispatch } from 'react-redux';
 import { addToCart } from '@/store/cartSlice';
 import { useSession } from 'next-auth/react';
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/select";
 
-export default function ProductHierarchy() {
-  const [anaGruplar, setAnaGruplar] = useState([]);
-  const [selectedAnaGrup, setSelectedAnaGrup] = useState(null);
-  const [markalar, setMarkalar] = useState([]);
-  const [selectedMarka, setSelectedMarka] = useState(null);
-  const [stoklar, setStoklar] = useState([]);
+export default function ProductSearch() {
+  const [products, setProducts] = useState([]);
+  const [filters, setFilters] = useState({
+    anaGrupIsmi: '',
+    markaIsmi: '',
+    stokIsmi: '',
+    formulasyonIsmi: '',
+    agirlikBirimIsmi: ''
+  });
   const [quantities, setQuantities] = useState({});
   const dispatch = useDispatch();
   const { data: session } = useSession();
 
   useEffect(() => {
-    fetchAnaGruplar();
+    fetchProducts();
   }, []);
 
-  useEffect(() => {
-    if (selectedAnaGrup) {
-      fetchMarkalar(selectedAnaGrup);
-    }
-  }, [selectedAnaGrup]);
-
-  useEffect(() => {
-    if (selectedMarka) {
-      fetchStoklar(selectedMarka);
-    }
-  }, [selectedMarka]);
-
-  const fetchAnaGruplar = async () => {
+  const fetchProducts = async () => {
     try {
-      const response = await axios.get('/api/setoProduct/anagrup');
-      setAnaGruplar(response.data);
+      const response = await axios.get('/api/setoProduct/all');
+      setProducts(response.data);
     } catch (error) {
-      console.error('Error fetching AnaGruplar:', error);
+      console.error('Error fetching data:', error);
     }
   };
 
-  const fetchMarkalar = async (anaGrup) => {
-    try {
-      const response = await axios.get(`/api/setoProduct/marka?anaGrup=${encodeURIComponent(anaGrup)}`);
-      setMarkalar(response.data);
-      setSelectedMarka(null);
-      setStoklar([]);
-    } catch (error) {
-      console.error('Error fetching Markalar:', error);
-    }
-  };
+  const filteredItems = useMemo(() => {
+    return products.filter((product) => {
+      return (
+        (filters.anaGrupIsmi === "" || product.anaGrupIsmi === filters.anaGrupIsmi) &&
+        (filters.markaIsmi === "" || product.markaIsmi === filters.markaIsmi) &&
+        (filters.stokIsmi === "" || product.stokIsmi === filters.stokIsmi) &&
+        (filters.formulasyonIsmi === "" || product.formulasyonIsmi === filters.formulasyonIsmi) &&
+        (filters.agirlikBirimIsmi === "" || product.agirlikBirimIsmi === filters.agirlikBirimIsmi)
+      );
+    });
+  }, [filters, products]);
 
-  const fetchStoklar = async (marka) => {
-    try {
-      const response = await axios.get(`/api/setoProduct/stok?markaIsmi=${encodeURIComponent(marka)}`);
-      setStoklar(response.data);
-    } catch (error) {
-      console.error('Error fetching Stoklar:', error);
-    }
-  };
+  const uniqueValues = useMemo(() => {
+    return {
+      anaGrupIsmi: Array.from(new Set(filteredItems.map(product => product.anaGrupIsmi))),
+      markaIsmi: Array.from(new Set(filteredItems.map(product => product.markaIsmi))),
+      stokIsmi: Array.from(new Set(filteredItems.map(product => product.stokIsmi))),
+      formulasyonIsmi: Array.from(new Set(filteredItems.map(product => product.formulasyonIsmi))),
+      agirlikBirimIsmi: Array.from(new Set(filteredItems.map(product => product.agirlikBirimIsmi))),
+    };
+  }, [filteredItems]);
 
+  const handleFilterChange = (name, value) => {
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      [name]: value === "all" ? "" : value === "__EMPTY__" ? "" : value,
+    }));
+  };
 
   const handleQuantityChange = (stokIsmi, value) => {
     setQuantities(prev => ({
@@ -84,81 +86,63 @@ export default function ProductHierarchy() {
   return (
     <Layout>
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-6">Ürün Hiyerarşisi</h1>
-        <div className="mb-4">
-          <h2 className="text-lg font-bold mb-2">Ana Gruplar</h2>
-          <div className="flex flex-wrap gap-2">
-            {anaGruplar.map((anaGrup) => (
-              <button
-                key={anaGrup.anaGrupIsmi}
-                onClick={() => setSelectedAnaGrup(anaGrup.anaGrupIsmi)}
-                className={`px-4 py-2 rounded ${selectedAnaGrup === anaGrup.anaGrupIsmi ? 'bg-blue-500 text-white' : 'bg-gray-200'
-                  }`}
-              >
-                {anaGrup.anaGrupIsmi}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {selectedAnaGrup && (
-          <div className="mb-4">
-            <h2 className="text-lg font-bold mb-2">Markalar</h2>
-            <div className="flex flex-wrap gap-2">
-              {markalar.map((marka) => (
-                <button
-                  key={marka.markaIsmi}
-                  onClick={() => setSelectedMarka(marka.markaIsmi)}
-                  className={`px-4 py-2 rounded ${selectedMarka === marka.markaIsmi ? 'bg-green-500 text-white' : 'bg-gray-200'
-                    }`}
-                >
-                  {marka.markaIsmi}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {selectedMarka && (
-          <div>
-            <h2 className="text-lg font-bold mb-2">Stoklar</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-4 py-2">Stok İsmi</th>
-                    <th className="border border-gray-300 px-4 py-2">Adet</th>
-                    <th className="border border-gray-300 px-4 py-2">İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stoklar.map((stok, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="border border-gray-300 px-4 py-2">{stok.stokIsmi}</td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        <input
-                          type="number"
-                          min="0"
-                          value={quantities[stok.stokIsmi] || ''}
-                          onChange={(e) => handleQuantityChange(stok.stokIsmi, e.target.value)}
-                          className="w-20 px-2 py-1 border rounded"
-                        />
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        <button
-                          onClick={() => handleAddToCart(stok.stokIsmi)}
-                          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded"
-                        >
-                          Sepete Ekle
-                        </button>
-                      </td>
-                    </tr>
+        <h1 className="text-2xl font-bold mb-6">Ürün Arama</h1>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                {['anaGrupIsmi', 'markaIsmi', 'stokIsmi', 'formulasyonIsmi', 'agirlikBirimIsmi'].map((column) => (
+                  <th key={column} className="border border-gray-300 px-4 py-2">
+                    <div className="flex flex-col space-y-1">
+                      <span>{column}</span>
+                      <Select onValueChange={(value) => handleFilterChange(column, value)}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          {uniqueValues[column].map((value) => (
+                            <SelectItem key={value || "__EMPTY__"} value={value || "__EMPTY__"}>
+                              {value || "No Value"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </th>
+                ))}
+                <th className="border border-gray-300 px-4 py-2">Adet</th>
+                <th className="border border-gray-300 px-4 py-2">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map((product, index) => (
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                  {['anaGrupIsmi', 'markaIsmi', 'stokIsmi', 'formulasyonIsmi', 'agirlikBirimIsmi'].map((column) => (
+                    <td key={column} className="border border-gray-300 px-4 py-2">{product[column]}</td>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                  <td className="border border-gray-300 px-4 py-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={quantities[product.stokIsmi] || ''}
+                      onChange={(e) => handleQuantityChange(product.stokIsmi, e.target.value)}
+                      className="w-20 px-2 py-1"
+                    />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    <Button
+                      onClick={() => handleAddToCart(product.stokIsmi)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded"
+                    >
+                      Sepete Ekle
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </Layout>
   );
