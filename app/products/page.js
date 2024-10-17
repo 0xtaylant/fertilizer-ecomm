@@ -17,6 +17,7 @@ export default function ProductCatalog() {
   const [selectedMarka, setSelectedMarka] = useState(null);
   const [stoklar, setStoklar] = useState([]);
   const [quantities, setQuantities] = useState({});
+  const [selectedUnits, setSelectedUnits] = useState({});
   const dispatch = useDispatch();
   const { data: session } = useSession();
 
@@ -65,18 +66,38 @@ export default function ProductCatalog() {
     }
   };
 
-  const handleQuantityChange = (stokIsmi, delta) => {
-    setQuantities(prev => ({
+  const handleQuantityChange = (stokIsmi, delta, unit = 'adet') => {
+    setQuantities(prev => {
+      const currentQuantity = prev[stokIsmi]?.[unit] || 0;
+      const newQuantity = Math.max(0, currentQuantity + delta);
+      return {
+        ...prev,
+        [stokIsmi]: {
+          ...prev[stokIsmi],
+          [unit]: newQuantity
+        }
+      };
+    });
+  };
+
+  const handleUnitChange = (stokIsmi, unit) => {
+    setSelectedUnits(prev => ({
       ...prev,
-      [stokIsmi]: Math.max(0, (prev[stokIsmi] || 0) + delta)
+      [stokIsmi]: unit
     }));
   };
 
   const handleAddToCart = (stokIsmi) => {
-    const quantity = quantities[stokIsmi] || 0;
-    if (quantity > 0 && session?.user?.id) {
-      dispatch(addToCart({ userId: session.user.id, stokIsmi, quantity }));
-      setQuantities(prev => ({ ...prev, [stokIsmi]: 0 }));
+    const selectedUnit = selectedUnits[stokIsmi] || 'adet';
+    const quantity = quantities[stokIsmi]?.[selectedUnit] || 0;
+    const totalProducts = 
+      selectedUnit === 'adet' ? quantity :
+      selectedUnit === 'box' ? quantity * 20 :
+      selectedUnit === 'palette' ? quantity * 36 * 20 : 0;
+
+    if (totalProducts > 0 && session?.user?.id) {
+      dispatch(addToCart({ userId: session.user.id, stokIsmi, quantity: totalProducts, unit: selectedUnit }));
+      setQuantities(prev => ({ ...prev, [stokIsmi]: { adet: 0, box: 0, palette: 0 } }));
     } else if (!session?.user?.id) {
       alert("Please log in to add items to your cart.");
     } else {
@@ -92,7 +113,10 @@ export default function ProductCatalog() {
         <div className="flex space-x-4 mb-4">
           <div className="w-1/2">
             <h2 className="text-lg font-bold mb-2">Ana Gruplar</h2>
-            <Select onValueChange={(value) => setSelectedAnaGrup(value)}>
+            <Select onValueChange={(value) => {
+              setSelectedAnaGrup(value);
+              fetchMarkalar(value);
+            }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Ana Grup" />
               </SelectTrigger>
@@ -130,45 +154,68 @@ export default function ProductCatalog() {
           <div>
             <h2 className="text-lg font-bold mb-2">Stoklar</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {stoklar.map((stok) => (
-                <div 
-                  key={stok.stokIsmi} 
-                  className={`border rounded-lg p-4 flex flex-col ${
-                    quantities[stok.stokIsmi] > 0 ? 'bg-gray-200' : ''
-                  }`}
-                >
-                  <img 
-                    src="https://img.freepik.com/premium-photo/pouring-granulated-fertilizer-bushes-garden_960396-576091.jpg" 
-                    alt={stok.stokIsmi} 
-                    className="w-full h-48 object-cover mb-4 rounded"
-                  />
-                  <h3 className="text-lg font-semibold">{stok.stokIsmi}</h3>
-                  <div className="flex items-center mb-2 mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleQuantityChange(stok.stokIsmi, -1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      value={quantities[stok.stokIsmi] || 0} 
-                      onChange={(e) => handleQuantityChange(stok.stokIsmi, parseInt(e.target.value) - (quantities[stok.stokIsmi] || 0))}
-                      className="w-16 mx-2 text-center"
+              {stoklar.map((stok) => {
+                const selectedUnit = selectedUnits[stok.stokIsmi] || 'adet';
+                const quantity = quantities[stok.stokIsmi]?.[selectedUnit] || 0;
+                const totalProducts = 
+                  selectedUnit === 'adet' ? quantity :
+                  selectedUnit === 'box' ? quantity * 20 :
+                  selectedUnit === 'palette' ? quantity * 36 * 20 : 0;
+
+                return (
+                  <div 
+                    key={stok.stokIsmi} 
+                    className={`border rounded-lg p-4 flex flex-col ${
+                      quantity > 0 ? 'bg-gray-200' : ''
+                    }`}
+                  >
+                    <img 
+                      src="https://img.freepik.com/premium-photo/pouring-granulated-fertilizer-bushes-garden_960396-576091.jpg" 
+                      alt={stok.stokIsmi} 
+                      className="w-full h-48 object-cover mb-4 rounded"
                     />
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleQuantityChange(stok.stokIsmi, 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <h3 className="text-lg font-semibold">{stok.stokIsmi}</h3>
+                    <div className="flex items-center mb-2 mt-2">
+                      <Select 
+                        value={selectedUnit} 
+                        onValueChange={(value) => handleUnitChange(stok.stokIsmi, value)}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="Unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="adet">Adet</SelectItem>
+                          <SelectItem value="box">Box</SelectItem>
+                          <SelectItem value="palette">Palette</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleQuantityChange(stok.stokIsmi, -1, selectedUnit)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        value={quantity} 
+                        onChange={(e) => handleQuantityChange(stok.stokIsmi, parseInt(e.target.value) - quantity, selectedUnit)}
+                        className="w-16 mx-2 text-center"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleQuantityChange(stok.stokIsmi, 1, selectedUnit)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">Total products: {totalProducts}</p>
+                    <Button onClick={() => handleAddToCart(stok.stokIsmi)} className="mt-2">Add to Cart</Button>
                   </div>
-                  <Button onClick={() => handleAddToCart(stok.stokIsmi)} className="mt-2">Add to Cart</Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

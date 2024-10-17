@@ -8,6 +8,7 @@ export async function GET() {
     try {
         const products = await SetoProduct.find({}, {
             anaGrupIsmi: { $ifNull: ["$anaGrupIsmi", ""] },
+            altGrupIsmi: { $ifNull: ["$altGrupIsmi", ""] },
             markaIsmi: { $ifNull: ["$markaIsmi", ""] },
             stokIsmi: { $ifNull: ["$stokIsmi", ""] },
             formulasyonIsmi: { $ifNull: ["$formulasyonIsmi", ""] },
